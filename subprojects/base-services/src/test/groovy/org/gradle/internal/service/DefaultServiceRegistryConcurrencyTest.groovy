@@ -107,13 +107,13 @@ class DefaultServiceRegistryConcurrencyTest extends ConcurrentSpec {
         }
     }
 
-    def "close blocks while other threads are locating services"() {
+    def "close waits for pending requests to finish"() {
         def registry = new DefaultServiceRegistry()
         registry.addProvider(new Object() {
             String createString() {
-                DefaultServiceRegistryConcurrencyTest.this.instant.constructing
-                DefaultServiceRegistryConcurrencyTest.this.thread.block()
-                DefaultServiceRegistryConcurrencyTest.this.instant.constructed
+                instant.constructing
+                thread.block()
+                instant.constructed
                 "hi"
             }
         })
@@ -130,5 +130,44 @@ class DefaultServiceRegistryConcurrencyTest extends ConcurrentSpec {
 
         then:
         instant.constructed < instant.stopped
+    }
+
+    def "parent can close a child registry even when another thread tries to use the child"() {
+        given:
+        def parent = new DefaultServiceRegistry() {
+            String "create service that child will request while parent closes"() {
+                "foo"
+            }
+        }
+
+        def child = new DefaultServiceRegistry(parent) {
+            Integer "create service that depends on parent"(String dependency) {
+                1
+            }
+
+            @Override
+            void close() {
+                instant.closingChild
+                thread.block()
+                super.close()
+            }
+        }
+
+        parent.add(Closeable, child)
+
+        when:
+        async {
+            start() {
+                parent.close()
+            }
+            start {
+                thread.blockUntil.closingChild
+                child.get(Integer)
+            }
+        }
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains("closed")
     }
 }

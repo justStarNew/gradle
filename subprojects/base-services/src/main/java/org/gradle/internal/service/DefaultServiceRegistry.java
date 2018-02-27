@@ -265,9 +265,9 @@ public class DefaultServiceRegistry implements ServiceRegistry, Closeable {
             }
             state = State.CLOSING;
             waitForPendingRequests();
-            CompositeStoppable.stoppable(allServices).stop();
             state = State.CLOSED;
         }
+        CompositeStoppable.stoppable(allServices).stop();
     }
 
     private void waitForPendingRequests() {
