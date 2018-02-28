@@ -10,6 +10,8 @@ import org.gradle.api.tasks.compile.CompileOptions
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.internal.JavaInstallationProbe
+
+import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.the
 import org.gradle.kotlin.dsl.withType
 
@@ -19,9 +21,8 @@ open class GradleCompilePlugin : Plugin<Project> {
         if (rootProject == project) {
             val projectInternal = project as ProjectInternal
             val javaInstallationProbe = projectInternal.services.get(JavaInstallationProbe::class.java)
-            extensions.create(
+            extensions.create<AvailableJavaInstallations>(
                 "availableJavaInstallations",
-                AvailableJavaInstallations::class.java,
                 project,
                 javaInstallationProbe
             )
